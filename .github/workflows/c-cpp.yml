@@ -1,12 +1,22 @@
 name: C++ CI with CMake
 
 on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-  # 允许手动触发工作流
+  # 仅支持手动触发工作流，避免每次代码更新都自动生成release
   workflow_dispatch:
+    inputs:
+      version_bump_type:
+        description: '版本更新类型 (major/minor/patch)'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+      release_notes:
+        description: 'Release 备注信息'
+        required: false
+        type: string
 
 # 授予工作流创建Release所需的权限
 permissions:
@@ -149,7 +159,7 @@ jobs:
   release:
     needs: build
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch'
     steps:
     - name: Download all artifacts
       uses: actions/download-artifact@v4
@@ -196,13 +206,34 @@ jobs:
       env:
         VERSION: ${{ needs.build.outputs.version }}
         COMMIT_SHA: ${{ needs.build.outputs.commit_sha }}
-        TIMESTAMP: ${{ github.event.head_commit.timestamp }}
+        VERSION_BUMP_TYPE: ${{ github.event.inputs.version_bump_type }}
+        RELEASE_NOTES: ${{ github.event.inputs.release_notes }}
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           const version = process.env.VERSION;
           const commitSha = process.env.COMMIT_SHA;
-          const timestamp = process.env.TIMESTAMP;
+          const versionBumpType = process.env.VERSION_BUMP_TYPE || 'patch';
+          const releaseNotes = process.env.RELEASE_NOTES || '';
+          const timestamp = new Date().toISOString();
+          
+          // 构建Release说明
+          let releaseBody = `## dp_study v${version}\n\n`;
+          releaseBody += `**版本更新类型：** ${versionBumpType}\n\n`;
+          releaseBody += `**更新内容：**\n`;
+          
+          // 添加用户提供的发布备注（如果有）
+          if (releaseNotes) {
+            releaseBody += releaseNotes + '\n\n';
+          } else {
+            releaseBody += '- 手动从main分支构建的版本\n';
+          }
+          
+          releaseBody += `- 支持多平台（Windows, Linux, macOS）\n`;
+          releaseBody += `- 支持多编译器（GCC, Clang, MSVC）\n\n`;
+          releaseBody += `**构建信息：**\n`;
+          releaseBody += `- 提交哈希: ${commitSha}\n`;
+          releaseBody += `- 构建时间: ${timestamp}`;
           
           // 创建Release
           const release = await github.rest.repos.createRelease({
@@ -210,7 +241,7 @@ jobs:
             repo: context.repo.repo,
             tag_name: `v${version}`,
             name: `Release v${version}`,
-            body: `## dp_study v${version}\n\n**更新内容：**\n- 自动从main分支构建的最新版本\n- 支持多平台（Windows, Linux, macOS）\n- 支持多编译器（GCC, Clang, MSVC）\n\n**构建信息：**\n- 提交哈希: ${commitSha}\n- 构建时间: ${timestamp}`,
+            body: releaseBody,
             draft: false,
             prerelease: false
           });

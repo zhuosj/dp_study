@@ -16,13 +16,33 @@ elseif (MSVC)
     add_compile_options(/W4)
 endif()
 
+# 添加头文件搜索路径
+include_directories(
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/third_party
+)
+
 # 添加可执行文件
-add_executable(dp_study src/main.cpp)
+add_executable(dp_study 
+    src/main.cpp
+    src/dp_algorithms.cpp
+)
 
-# 如果有多个源文件，可以使用以下方式
-# file(GLOB SOURCES "src/*.cpp")
-# add_executable(dp_study ${SOURCES})
+# 启用测试
+enable_testing()
 
-# 可选：启用测试
-# enable_testing()
-# add_subdirectory(tests)
+# 添加测试子目录
+if (EXISTS ${PROJECT_SOURCE_DIR}/test/CMakeLists.txt)
+    add_subdirectory(test)
+endif()
+
+# 添加文档构建支持
+option(BUILD_DOC "Build documentation" OFF)
+if(BUILD_DOC)
+    # 可以在这里添加文档构建配置
+    message(STATUS "Documentation build enabled")
+endif()
+
+# 安装配置
+install(TARGETS dp_study DESTINATION bin)
+install(DIRECTORY include/ DESTINATION include)
