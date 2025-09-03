@@ -8,7 +8,13 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # 添加编译选项
-add_compile_options(-Wall -Wextra -Wpedantic)
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    # 对于GCC和Clang编译器
+    add_compile_options(-Wall -Wextra -Wpedantic)
+elseif (MSVC)
+    # 对于MSVC编译器
+    add_compile_options(/W4)
+endif()
 
 # 添加可执行文件
 add_executable(dp_study src/main.cpp)
