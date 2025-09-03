@@ -114,8 +114,8 @@ jobs:
         # 保留1天的构建产物
         retention-days: 1
 
-# 创建和发布GitHub Release
-release:
+  # 创建和发布GitHub Release
+  release:
   needs: build
   runs-on: ubuntu-latest
   if: github.event_name == 'push' && github.ref == 'refs/heads/main'
