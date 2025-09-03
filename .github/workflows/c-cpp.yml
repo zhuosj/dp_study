@@ -44,31 +44,44 @@ jobs:
       # 使用bash shell确保兼容性
       shell: bash
       run: |
-        # 设置错误处理以捕获任何命令失败
-        set -e
+        # 使用简单直接的方法设置版本号，避免复杂命令导致的失败
+        # 默认使用初始版本0.0.1
+        VERSION="0.0.1"
         
-        # 检查是否存在现有的release
-        # 添加错误处理，允许命令失败
-        EXISTING_TAGS=""
-        if git ls-remote --tags origin > /dev/null 2>&1; then
-          # 如果git ls-remote成功，尝试获取标签
-          EXISTING_TAGS=$(git ls-remote --tags origin | grep -o 'refs/tags/v[0-9]\+\.[0-9]\+\.[0-9]\+')
+        # 尝试获取现有标签，但不依赖此操作的成功
+        # 使用管道和条件语句确保即使命令失败也能继续执行
+        GIT_TAGS=$(git ls-remote --tags origin 2>/dev/null || echo "")
+        
+        # 如果获取到标签，尝试解析最新版本
+        if [ -n "$GIT_TAGS" ]; then
+          # 过滤出符合语义化版本格式的标签
+          SEMVER_TAGS=$(echo "$GIT_TAGS" | grep -o 'refs/tags/v[0-9]\+\.[0-9]\+\.[0-9]\+' 2>/dev/null || echo "")
           
-          # 检查是否有标签，并使用兼容的排序方法
-          if [ -n "$EXISTING_TAGS" ]; then
-            # 使用更兼容的排序方法，确保跨平台一致性
-            LATEST_TAG=$(echo "$EXISTING_TAGS" | sort -t. -k1,1n -k2,2n -k3,3n | tail -n 1 | sed 's/refs\/tags\/v//')
-            IFS='.' read -r MAJOR MINOR PATCH <<< "$LATEST_TAG"
-            NEW_PATCH=$((PATCH + 1))
-            echo "version=${MAJOR}.${MINOR}.${NEW_PATCH}" >> $GITHUB_OUTPUT
-            echo "Using next version: v${MAJOR}.${MINOR}.${NEW_PATCH}"
-            exit 0
+          if [ -n "$SEMVER_TAGS" ]; then
+            # 尝试获取最新标签并递增版本号
+            # 使用简单的排序方法，避免复杂参数导致的问题
+            LATEST_TAG=$(echo "$SEMVER_TAGS" | sed 's/refs\/tags\///' | sort --version-sort | tail -n 1 | sed 's/v//')
+            
+            # 确保成功提取到版本号后再尝试递增
+            if [ -n "$LATEST_TAG" ]; then
+              # 使用简单的方法分割版本号
+              MAJOR=$(echo "$LATEST_TAG" | cut -d. -f1)
+              MINOR=$(echo "$LATEST_TAG" | cut -d. -f2)
+              PATCH=$(echo "$LATEST_TAG" | cut -d. -f3)
+              
+              # 确保版本号部分都是数字后再递增
+              if [[ "$MAJOR" =~ ^[0-9]+$ && "$MINOR" =~ ^[0-9]+$ && "$PATCH" =~ ^[0-9]+$ ]]; then
+                NEW_PATCH=$((PATCH + 1))
+                VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
+                echo "Found existing tags, using next version: v$VERSION"
+              fi
+            fi
           fi
         fi
         
-        # 如果没有现有标签或命令失败，使用初始版本0.0.1
-        echo "No existing tags found, using initial version 0.0.1"
-        echo "version=0.0.1" >> $GITHUB_OUTPUT
+        # 无论前面的命令是否成功，始终输出版本号
+        echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+        echo "Final version being used: v$VERSION"
 
     # 在 Linux 上设置编译器
     - name: Set compiler (Linux)
