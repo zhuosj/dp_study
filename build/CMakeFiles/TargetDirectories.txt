@@ -1,3 +1,0 @@
-/home/zhuo/git/dp_study/build/CMakeFiles/dp_study.dir
-/home/zhuo/git/dp_study/build/CMakeFiles/edit_cache.dir
-/home/zhuo/git/dp_study/build/CMakeFiles/rebuild_cache.dir

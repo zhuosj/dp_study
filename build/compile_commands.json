@@ -1,7 +1,0 @@
-[
-{
-  "directory": "/home/zhuo/git/dp_study/build",
-  "command": "/usr/bin/g++   -g -Wall -Wextra -Wpedantic -std=gnu++17 -o CMakeFiles/dp_study.dir/src/main.cpp.o -c /home/zhuo/git/dp_study/src/main.cpp",
-  "file": "/home/zhuo/git/dp_study/src/main.cpp"
-}
-]
