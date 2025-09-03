@@ -1,4 +1,4 @@
-name: C/C++ CI
+name: C++ CI with CMake
 
 on:
   push:
@@ -8,16 +8,81 @@ on:
 
 jobs:
   build:
-
-    runs-on: ubuntu-latest
+    # 可以在多个操作系统上运行
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        # 可以添加多个编译器版本
+        compiler: [g++, clang++, cl]
+        include:
+          - os: ubuntu-latest
+            compiler: g++
+          - os: ubuntu-latest
+            compiler: clang++
+          - os: windows-latest
+            compiler: cl
+          - os: macos-latest
+            compiler: clang++
+      # 如果一个矩阵构建失败，其他构建继续
+      fail-fast: false
 
     steps:
     - uses: actions/checkout@v4
-    - name: configure
-      run: ./configure
-    - name: make
-      run: make
-    - name: make check
-      run: make check
-    - name: make distcheck
-      run: make distcheck
+      with:
+        submodules: recursive
+
+    # 在 Linux 上设置编译器
+    - name: Set compiler (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        if [ "${{ matrix.compiler }}" = "g++" ]; then
+          sudo apt-get install -y g++
+          echo "CXX=g++" >> $GITHUB_ENV
+        else
+          sudo apt-get install -y clang
+          echo "CXX=clang++" >> $GITHUB_ENV
+        fi
+
+    # 在 macOS 上设置编译器
+    - name: Set compiler (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        brew install llvm
+        echo "CXX=clang++" >> $GITHUB_ENV
+        echo "PATH=/usr/local/opt/llvm/bin:$PATH" >> $GITHUB_ENV
+
+    # 创建构建目录
+    - name: Create Build Directory
+      run: mkdir -p build
+
+    # 在 Linux/macOS 上运行 CMake 配置
+    - name: Configure CMake (Linux/macOS)
+      if: matrix.os != 'windows-latest'
+      working-directory: ./build
+      run: cmake .. -DCMAKE_BUILD_TYPE=Release
+
+    # 在 Windows 上运行 CMake 配置
+    - name: Configure CMake (Windows)
+      if: matrix.os == 'windows-latest'
+      working-directory: ./build
+      run: cmake .. -DCMAKE_BUILD_TYPE=Release
+
+    # 构建项目
+    - name: Build
+      working-directory: ./build
+      run: cmake --build . --config Release
+
+    # 如果有测试，可以添加测试步骤
+    # - name: Test
+    #   working-directory: ./build
+    #   run: ctest -C Release
+
+    # 可选：上传构建产物
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: dp_study-${{ matrix.os }}-${{ matrix.compiler }}
+        path: |
+          build/dp_study*
+          build/dp_study.exe
