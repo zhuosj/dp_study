@@ -116,10 +116,10 @@ jobs:
 
   # 创建和发布GitHub Release
   release:
-  needs: build
-  runs-on: ubuntu-latest
-  if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-  steps:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
     - name: Download all artifacts
       uses: actions/download-artifact@v4
       with:
