@@ -1,0 +1,23 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "编译为汇编代码",
+            "type": "shell",
+            "command": "gcc",
+            "args": [
+                "-g",
+                "${file}",
+                "-O0",
+                "-fverbose-asm",
+                "-S",
+                "-o",
+                "${fileDirname}/${fileBasenameNoExtension}.s"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}
